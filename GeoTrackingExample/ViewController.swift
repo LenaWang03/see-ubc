@@ -27,6 +27,25 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
     var currentAnchors: [ARAnchor] {
         return arView.session.currentFrame?.anchors ?? []
     }
+    
+    var presetAnchors: [ARGeoAnchor] = [ARGeoAnchor(name: "UBC Bookstore",
+                                                    coordinate: CLLocationCoordinate2D(
+                                                        latitude: Double(49.26520957099511),
+                                                        longitude: Double(-123.25039165070186)),
+                                                    altitude: Double(80))
+    ]
+    
+    func loadPresetAnchors() {
+        //add hard coded preset anchors--->future upgrade: to parse gpx files
+        //let coordinate = CLLocationCoordinate2D(latitude: Double(49.26520957099511), longitude: Double(-123.25039165070186))
+        //let geoAnchor = ARGeoAnchor(name: "UBC Bookstore", coordinate: coordinate, altitude: Double(80))
+        //presetAnchors.append(geoAnchor)
+        
+        //then load preset anchors
+        for anchor in presetAnchors{
+            addGeoAnchor(anchor)
+        }
+    }
         
     // Geo anchors ordered by the time of their addition to the scene.
     var geoAnchors: [GeoAnchorWithAssociatedData] = []
@@ -63,6 +82,9 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
                 
         // Run a new AR Session.
         restartSession()
+        
+        // Load preset Anchors
+        loadPresetAnchors()
                 
         // Add tap gesture recognizers
         arView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleTapOnARView(_:))))
