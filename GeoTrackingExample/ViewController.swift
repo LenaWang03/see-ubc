@@ -45,6 +45,7 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
         for anchor in presetAnchors{
             addGeoAnchor(anchor)
         }
+        showToast("Loading Preset Anchors...Hopefully")
     }
         
     // Geo anchors ordered by the time of their addition to the scene.
@@ -342,7 +343,7 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
     // MARK: - MKMapViewDelegate
     
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-        if let anchorOverlay = overlay as? AnchorIndicator {
+        if let anchorOverlay = overlay as?  AnchorIndicator {
             let anchorOverlayView = MKCircleRenderer(circle: anchorOverlay)
             anchorOverlayView.strokeColor = .white
             anchorOverlayView.fillColor = .blue
