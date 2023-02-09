@@ -27,6 +27,26 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
     var currentAnchors: [ARAnchor] {
         return arView.session.currentFrame?.anchors ?? []
     }
+    
+    var presetAnchors: [ARGeoAnchor] = [ARGeoAnchor(name: "Home",
+                                                    coordinate: CLLocationCoordinate2D(
+                                                        latitude: Double(49.344494),
+                                                        longitude: Double(-123.063546)),
+                                                    altitude: Double(259))
+    ]
+    
+    func loadPresetAnchors() {
+        //add hard coded preset anchors--->future upgrade: to parse gpx files
+        //let coordinate = CLLocationCoordinate2D(latitude: Double(49.26520957099511), longitude: Double(-123.25039165070186))
+        //let geoAnchor = ARGeoAnchor(name: "UBC Bookstore", coordinate: coordinate, altitude: Double(80))
+        //presetAnchors.append(geoAnchor)
+        
+        //then load preset anchors
+        for anchor in presetAnchors{
+            addGeoAnchor(anchor)
+        }
+        showToast("Loading Preset Anchors...Hopefully")
+    }
         
     // Geo anchors ordered by the time of their addition to the scene.
     var geoAnchors: [GeoAnchorWithAssociatedData] = []
@@ -63,10 +83,12 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
                 
         // Run a new AR Session.
         restartSession()
+        
+        // Load preset Anchors
+        // loadPresetAnchors()
                 
         // Add tap gesture recognizers
         arView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleTapOnARView(_:))))
-        mapView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleTapOnMapView(_:))))
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -95,41 +117,68 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
     @objc
     func handleTapOnARView(_ sender: UITapGestureRecognizer) {
         let point = sender.location(in: view)
-        
         // Perform ARKit raycast on tap location
         if let result = arView.raycast(from: point, allowing: .estimatedPlane, alignment: .any).first {
-            addGeoAnchor(at: result.worldTransform.translation)
+            tapGeoAnchor(at: result.worldTransform.translation)
         } else {
             showToast("No raycast result.\nTry pointing at a different area\nor move closer to a surface.")
         }
     }
+
+    func tapGeoAnchor(at worldPosition: SIMD3<Float>) {
+        arView.session.getGeoLocation(forPoint: worldPosition) { (location, altitude, error) in
+            if let error = error {
+                self.alertUser(withTitle: "Cannot add geo anchor",
+                               message: "An error occurred while translating ARKit coordinates to geo coordinates: \(error.localizedDescription)")
+                return
+            }
+            self.showToast("Not within bounds")
+            self.processTap(at: location, altitude: altitude)
+        }
+    }
+    
+    func processTap(at location: CLLocationCoordinate2D, altitude: CLLocationDistance) {
+        for anchor in presetAnchors {
+            //let b: String = String(format: "%f", location.latitude)
+            //let c: String = String(format: "%f", location.longitude)
+            // let d: String = String(format: "%f", altitude)
+            //showToast("latitude: \(b)")
+            //showToast("longitude: \(b)")
+            var a_coord = anchor.coordinate
+            // var a_alt = Double(anchor.altitude ?? 275)
+            if ((location.latitude >= a_coord.latitude - 0.00002) && (location.latitude <= a_coord.latitude + 0.00002)) &&
+                ((location.longitude >= a_coord.longitude - 0.00002) && (location.longitude <= a_coord.longitude + 0.00002)) {
+                    showToast("Tapped!")
+                }
+        }
+    }
     
     // Responds to a user tap on the map view.
-    @objc
-    func handleTapOnMapView(_ sender: UITapGestureRecognizer) {
-        let point = sender.location(in: mapView)
-        let location = mapView.convert(point, toCoordinateFrom: mapView)
-        addGeoAnchor(at: location)
-    }
+    // @objc
+    // func handleTapOnMapView(_ sender: UITapGestureRecognizer) {
+    //     let point = sender.location(in: mapView)
+    //     let location = mapView.convert(point, toCoordinateFrom: mapView)
+    //     addGeoAnchor(at: location)
+    // }
     
     // Removes the most recent geo anchor.
-    @IBAction func undoButtonTapped(_ sender: Any) {
-        guard let lastGeoAnchor = geoAnchors.last else {
-            showToast("Nothing to undo")
-            return
-        }
+    // @IBAction func undoButtonTapped(_ sender: Any) {
+    //     guard let lastGeoAnchor = geoAnchors.last else {
+    //         showToast("Nothing to undo")
+    //         return
+    //     }
         
-        // Remove geo anchor from the scene.
-        arView.session.remove(anchor: lastGeoAnchor.geoAnchor)
+    //     // Remove geo anchor from the scene.
+    //     arView.session.remove(anchor: lastGeoAnchor.geoAnchor)
         
-        // Remove map overlay
-        mapView.removeOverlay(lastGeoAnchor.mapOverlay)
+    //     // Remove map overlay
+    //     mapView.removeOverlay(lastGeoAnchor.mapOverlay)
         
-        // Remove the element from the collection.
-        geoAnchors.removeLast()
+    //     // Remove the element from the collection.
+    //     geoAnchors.removeLast()
         
-        showToast("Removed last added anchor")
-    }
+    //     showToast("Removed last added anchor")
+    // }
     
     // MARK: - Methods
     
@@ -190,28 +239,7 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
         mapView.removeOverlays(anchorOverlays)
         
         showToast("Running new AR session")
-    }
-    
-    func addGeoAnchor(at worldPosition: SIMD3<Float>) {
-        arView.session.getGeoLocation(forPoint: worldPosition) { (location, altitude, error) in
-            if let error = error {
-                self.alertUser(withTitle: "Cannot add geo anchor",
-                               message: "An error occurred while translating ARKit coordinates to geo coordinates: \(error.localizedDescription)")
-                return
-            }
-            self.addGeoAnchor(at: location, altitude: altitude)
-        }
-    }
-    
-    func addGeoAnchor(at location: CLLocationCoordinate2D, altitude: CLLocationDistance? = nil) {
-        var geoAnchor: ARGeoAnchor!
-        if let altitude = altitude {
-            geoAnchor = ARGeoAnchor(coordinate: location, altitude: altitude)
-        } else {
-            geoAnchor = ARGeoAnchor(coordinate: location)
-        }
         
-        addGeoAnchor(geoAnchor)
     }
     
     func addGeoAnchor(_ geoAnchor: ARGeoAnchor) {
@@ -286,6 +314,7 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
         // In localized state, show geotracking accuracy
         if geoTrackingStatus.state == .localized {
             text += "Accuracy: \(geoTrackingStatus.accuracy.description)"
+            loadPresetAnchors()
         } else {
             // Otherwise show details why geotracking couldn't localize (yet)
             switch geoTrackingStatus.stateReason {
