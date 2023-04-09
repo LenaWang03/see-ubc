@@ -34,6 +34,7 @@ extension Entity {
         let placemarkAnchor = AnchorEntity(anchor: arAnchor)
         
         let sphereIndicator = generateSphereIndicator(radius: 0.1)
+        //let sphereIndicator = generateModel();
         
         // Move the indicator up by half its height so that it doesn't intersect with the ground.
         let height = sphereIndicator.visualBounds(relativeTo: nil).extents.y
@@ -47,6 +48,29 @@ extension Entity {
         
         return placemarkAnchor
     }
+    
+    /*
+    // Work in progress - updating 3dmodel
+    static func generateModel() -> Entity {
+        if let indicatorEntity = try? Entity.load(named: "Lowpoly_tree_sample2") {
+            return indicatorEntity
+        } else {
+            // handle the case where the file could not be loaded
+            fatalError("Could not load model entity.")
+        }
+    }
+    
+    // Version 2
+    static func generateModel() -> Entity {
+        let indicatorEntity = Entity()
+        if let tree = try? ModelEntity.load(named: "Lowpoly_tree_sample2") {
+            indicatorEntity.addChild(tree)
+            return indicatorEntity
+        } else {
+            // handle the case where the file could not be loaded
+            fatalError("Could not load model entity.")
+        }
+    }*/
     
     static func generateSphereIndicator(radius: Float) -> Entity {
         let indicatorEntity = Entity()
@@ -108,6 +132,11 @@ extension ViewController {
                 }
             }
         }
+    }
+    func showAlert(title: String, message: String, viewController: UIViewController) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Close", style: .default, handler: nil))
+        viewController.present(alert, animated: true, completion: nil)
     }
 }
 

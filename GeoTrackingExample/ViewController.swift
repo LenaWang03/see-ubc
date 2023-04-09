@@ -19,6 +19,7 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
     @IBOutlet weak var undoButton: UIButton!
     @IBOutlet weak var menuButton: UIButton!
     @IBOutlet weak var trackingStateLabel: UILabel!
+    @IBOutlet weak var pointsLabel: UILabel!
     
     let coachingOverlay = ARCoachingOverlayView()
     
@@ -32,20 +33,36 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
                                                     coordinate: CLLocationCoordinate2D(
                                                         latitude: Double(49.344494),
                                                         longitude: Double(-123.063546)),
+                                                    altitude: Double(259)),
+                                        ARGeoAnchor(name: "Beside Home",
+                                                    coordinate: CLLocationCoordinate2D(
+                                                        latitude: Double(49.344491),
+                                                        longitude: Double(-123.063578)),
+                                                    altitude: Double(259)),
+                                        ARGeoAnchor(name: "Across the Street",
+                                                    coordinate: CLLocationCoordinate2D(
+                                                        latitude: Double(49.344398),
+                                                        longitude: Double(-123.063444)),
                                                     altitude: Double(259))
     ]
     
+    var info = ["Home": "This is my home",
+                "Beside Home": "This is slightly beside my home",
+                "Across the Street": "This is across the street"]
+    
+    var visited: [String] = []
+    
     func loadPresetAnchors() {
-        //add hard coded preset anchors--->future upgrade: to parse gpx files
-        //let coordinate = CLLocationCoordinate2D(latitude: Double(49.26520957099511), longitude: Double(-123.25039165070186))
-        //let geoAnchor = ARGeoAnchor(name: "UBC Bookstore", coordinate: coordinate, altitude: Double(80))
-        //presetAnchors.append(geoAnchor)
+        var added: [String] = [];
         
         //then load preset anchors
         for anchor in presetAnchors{
-            addGeoAnchor(anchor)
+            if !added.contains(anchor.name!){
+                addGeoAnchor(anchor)
+                added.append(anchor.name!)
+            }
         }
-        showToast("Loading Preset Anchors...Hopefully")
+        showToast("Loading Preset Anchors...")
     }
         
     // Geo anchors ordered by the time of their addition to the scene.
@@ -84,11 +101,10 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
         // Run a new AR Session.
         restartSession()
         
-        // Load preset Anchors
-        // loadPresetAnchors()
+        self.pointsLabel.text = String(visited.count) + " ⭐️"
                 
         // Add tap gesture recognizers
-        arView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleTapOnARView(_:))))
+        // arView.addGestureRecognizexr(UITapGestureRecognizer(target: self, action: #selector(handleTapOnARView(_:))))
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -132,23 +148,25 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
                                message: "An error occurred while translating ARKit coordinates to geo coordinates: \(error.localizedDescription)")
                 return
             }
-            self.showToast("Not within bounds")
+            //self.showToast("Not within bounds")
             self.processTap(at: location, altitude: altitude)
         }
     }
     
     func processTap(at location: CLLocationCoordinate2D, altitude: CLLocationDistance) {
         for anchor in presetAnchors {
-            //let b: String = String(format: "%f", location.latitude)
-            //let c: String = String(format: "%f", location.longitude)
-            // let d: String = String(format: "%f", altitude)
-            //showToast("latitude: \(b)")
-            //showToast("longitude: \(b)")
             var a_coord = anchor.coordinate
-            // var a_alt = Double(anchor.altitude ?? 275)
+            var message: String;
             if ((location.latitude >= a_coord.latitude - 0.00002) && (location.latitude <= a_coord.latitude + 0.00002)) &&
                 ((location.longitude >= a_coord.longitude - 0.00002) && (location.longitude <= a_coord.longitude + 0.00002)) {
-                    showToast("Tapped!")
+                    message = info[anchor.name!]!
+                
+                    // Add to visited list if not already there
+                    if !visited.contains(anchor.name!){
+                        visited.append(anchor.name!)
+                }
+                    showAlert(title: "Location information", message: message, viewController: self)
+                    self.pointsLabel.text = String(visited.count) + " ⭐️"
                 }
         }
     }
@@ -162,23 +180,18 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
     // }
     
     // Removes the most recent geo anchor.
-    // @IBAction func undoButtonTapped(_ sender: Any) {
-    //     guard let lastGeoAnchor = geoAnchors.last else {
-    //         showToast("Nothing to undo")
-    //         return
-    //     }
-        
-    //     // Remove geo anchor from the scene.
-    //     arView.session.remove(anchor: lastGeoAnchor.geoAnchor)
-        
-    //     // Remove map overlay
-    //     mapView.removeOverlay(lastGeoAnchor.mapOverlay)
-        
-    //     // Remove the element from the collection.
-    //     geoAnchors.removeLast()
-        
-    //     showToast("Removed last added anchor")
-    // }
+    @IBAction func undoButtonTapped(_ sender: Any) {
+        locationManager.startUpdatingLocation()
+        guard let location = locationManager.location else { return }
+        let camera = MKMapCamera(lookingAtCenter: location.coordinate,
+                                          fromDistance: CLLocationDistance(250),
+                                          pitch: 0,
+                                          heading: mapView.camera.heading)
+                mapView.setCamera(camera, animated: false)
+                mapView.isZoomEnabled = true
+                mapView.isScrollEnabled = true
+                locationManager.stopUpdatingLocation()
+    }
     
     // MARK: - Methods
     
@@ -188,12 +201,12 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
         actionSheet.addAction(UIAlertAction(title: "Reset Session", style: .destructive, handler: { (_) in
             self.restartSession()
         }))
-        actionSheet.addAction(UIAlertAction(title: "Load Anchors …", style: .default, handler: { (_) in
-            self.showGPXFiles()
-        }))
-        actionSheet.addAction(UIAlertAction(title: "Save Anchors …", style: .default, handler: { (_) in
-            self.saveAnchors()
-        }))
+        //;actionSheet.addAction(UIAlertAction(title: "Load Anchors …", style: .default, handler: { (_) in
+            //self.showGPXFiles()
+        //}))
+        //actionSheet.addAction(UIAlertAction(title: "Save Anchors …", style: .default, handler: { (_) in
+        //    self.saveAnchors()
+        //}))
         actionSheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         present(actionSheet, animated: true)
     }
@@ -234,11 +247,19 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
         
         trackingStateLabel.text = ""
         
+//        // Remove all existing anchors
+//        for anchor in geoAnchors {
+//            arView.session.remove(anchor: anchor.geoAnchor)
+//        }
+        
         // Remove all anchor overlays from the map view
         let anchorOverlays = mapView.overlays.filter { $0 is AnchorIndicator }
         mapView.removeOverlays(anchorOverlays)
         
         showToast("Running new AR session")
+        
+        // Add tap gesture recognizers
+        arView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleTapOnARView(_:))))
         
     }
     
@@ -331,19 +352,29 @@ class ViewController: UIViewController, ARSessionDelegate, CLLocationManagerDele
             }
         }
         self.trackingStateLabel.text = text
+        
     }
         
     // MARK: - CLLocationManagerDelegate
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        var initialLocation: CLLocation?
         // Update location indicator with live estimate from Core Location
         guard let location = locations.last else { return }
         
-        // Update map area
-        let camera = MKMapCamera(lookingAtCenter: location.coordinate,
-                                 fromDistance: CLLocationDistance(250),
-                                 pitch: 0,
-                                 heading: mapView.camera.heading)
-        mapView.setCamera(camera, animated: false)
+        if initialLocation == nil {
+            initialLocation = location
+            // Update map area
+            let camera = MKMapCamera(lookingAtCenter: location.coordinate,
+                                        fromDistance: CLLocationDistance(250),
+                                        pitch: 0,
+                                        heading: mapView.camera.heading)
+            mapView.setCamera(camera, animated: false)
+            mapView.isZoomEnabled = true
+            mapView.isScrollEnabled = true
+                    
+            // Stop location updates
+            locationManager.stopUpdatingLocation()
+        }
     }
     
     // MARK: - MKMapViewDelegate
