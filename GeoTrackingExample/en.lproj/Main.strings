@@ -1,0 +1,9 @@
+
+/* Class = "UILabel"; text = "Geo Tracking requires a device with A12 Bionic chip or later, and cellular (GPS) capability."; ObjectID = "6Ns-0t-GaH"; */
+"6Ns-0t-GaH.text" = "Geo Tracking requires a device with A12 Bionic chip or later, and cellular (GPS) capability.";
+
+/* Class = "UILabel"; text = "Toast"; ObjectID = "ak3-Cx-CrA"; */
+"ak3-Cx-CrA.text" = "Toast";
+
+/* Class = "UILabel"; text = "Unsupported Device"; ObjectID = "dB5-QO-aqJ"; */
+"dB5-QO-aqJ.text" = "Unsupported Device";
